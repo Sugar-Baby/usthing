@@ -104,6 +104,41 @@ describe("CourseDetailScreen — 30-course sample", () => {
     expect(view.queryAllByText("MATH1013").length).toBeGreaterThan(0)
   })
 
+  it("makes the AND/OR structure explicit in the tree", () => {
+    // AIAA2711: (UFUG 1103 OR UFUG 1106) AND (UFUG 2102 OR UFUG 2103)
+    // parses into four options, each an "all of" pair.
+    const view = renderDetail("AIAA2711")
+    expect(view.queryAllByText("Any one of these 4 options:").length).toBeGreaterThan(0)
+    expect(view.queryAllByText("Option 1 · all of").length).toBeGreaterThan(0)
+    expect(view.queryAllByText("Option 4 · all of").length).toBeGreaterThan(0)
+    expect(view.queryAllByText("or").length).toBeGreaterThan(0)
+    expect(view.queryAllByText("and").length).toBeGreaterThan(0)
+  })
+
+  it("labels a single AND group as 'All of the following'", () => {
+    const single = courseList.find((c) => {
+      const d = resolveDetail(c.c, TERM)?.pqd
+      return Array.isArray(d) && d.length === 1 && Array.isArray(d[0]) && d[0].length > 1
+    })
+    expect(single).toBeTruthy()
+    const view = renderDetail(single!.c)
+    expect(view.queryAllByText("All of the following:").length).toBeGreaterThan(0)
+    expect(view.queryAllByText("and").length).toBeGreaterThan(0)
+    expect(view.queryAllByText("or").length).toBe(0)
+  })
+
+  it("renders a lone prerequisite without any AND/OR chrome", () => {
+    const solo = courseList.find((c) => {
+      const d = resolveDetail(c.c, TERM)?.pqd
+      return Array.isArray(d) && d.length === 1 && typeof d[0] === "string"
+    })
+    if (solo) {
+      const view = renderDetail(solo.c)
+      expect(view.queryAllByText("All of the following:").length).toBe(0)
+      expect(view.queryAllByText("or").length).toBe(0)
+    }
+  })
+
   it("handles courses with no prerequisites at all", () => {
     const plain = SAMPLE.find((c) => !resolveDetail(c.c, TERM)?.pq)
     if (plain) {
