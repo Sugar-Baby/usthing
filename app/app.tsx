@@ -1,0 +1,89 @@
+/* eslint-disable import/first */
+/**
+ * Welcome to the HKUST course explorer.
+ *
+ * This is the app entry point: fonts, theme, i18n and navigation. The app
+ * runs entirely offline — all course data is bundled (see
+ * `app/services/courses.ts` and `scripts/preprocess.py`).
+ */
+if (__DEV__) {
+  // Load Reactotron in development only.
+  // Note that you must be using metro's `inlineRequires` for this to work.
+  // If you turn it off in metro.config.js, you'll have to manually import it.
+  require("./devtools/ReactotronConfig.ts")
+}
+import "./utils/gestureHandler"
+
+import { useEffect, useState } from "react"
+import { useFonts } from "expo-font"
+import * as Linking from "expo-linking"
+import { KeyboardProvider } from "react-native-keyboard-controller"
+import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context"
+
+import { initI18n } from "./i18n"
+import { AppNavigator } from "./navigators/AppNavigator"
+import { useNavigationPersistence } from "./navigators/navigationUtilities"
+import { ThemeProvider } from "./theme/context"
+import { customFontsToLoad } from "./theme/typography"
+import { loadDateFnsLocale } from "./utils/formatDate"
+import * as storage from "./utils/storage"
+
+export const NAVIGATION_PERSISTENCE_KEY = "NAVIGATION_STATE"
+
+// Web linking configuration
+const prefix = Linking.createURL("/")
+const config = {
+  screens: {
+    Courses: "",
+    CourseList: "list",
+    CourseDetail: "course/:code/:term",
+  },
+}
+
+/**
+ * This is the root component of our app.
+ * @param {AppProps} props - The props for the `App` component.
+ * @returns {JSX.Element} The rendered `App` component.
+ */
+export function App() {
+  const {
+    initialNavigationState,
+    onNavigationStateChange,
+    isRestored: isNavigationStateRestored,
+  } = useNavigationPersistence(storage, NAVIGATION_PERSISTENCE_KEY)
+
+  const [areFontsLoaded, fontLoadError] = useFonts(customFontsToLoad)
+  const [isI18nInitialized, setIsI18nInitialized] = useState(false)
+
+  useEffect(() => {
+    initI18n()
+      .then(() => setIsI18nInitialized(true))
+      .then(() => loadDateFnsLocale())
+  }, [])
+
+  // Before we show the app, we have to wait for our state to be ready.
+  // In the meantime, don't render anything. This will be the background
+  // color set in native by rootView's background color.
+  if (!isNavigationStateRestored || !isI18nInitialized || (!areFontsLoaded && !fontLoadError)) {
+    return null
+  }
+
+  const linking = {
+    prefixes: [prefix],
+    config,
+  }
+
+  return (
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <KeyboardProvider>
+        <ThemeProvider>
+          <AppNavigator
+            linking={linking}
+            initialState={initialNavigationState}
+            onStateChange={onNavigationStateChange}
+          />
+        </ThemeProvider>
+      </KeyboardProvider>
+    </SafeAreaProvider>
+  )
+}
