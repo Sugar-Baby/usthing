@@ -127,6 +127,24 @@ def clean_condition_text(raw: str) -> str:
     t = raw
     # Outdated "prior to/before YYYY" parentheticals (keep the code itself).
     t = re.sub(r"\([^)]*\b(?:prior to|before)\s+\d{4}[^)]*\)", " ", t, flags=re.I)
+    # Parenthetical groups containing no course code are qualifiers rather
+    # than logic — "(for non-BIBU students)", "(a)", "(Level 3 in HKDSE …)".
+    # Left in place they parse to an empty factor and swallow everything
+    # after them, so drop them (the raw text is still shown in the UI).
+    for _ in range(4):
+        stripped = re.sub(
+            r"\([^()]*\)",
+            lambda m: " " if not COURSE_CODE_RE.search(m.group(0)) else m.group(0),
+            t,
+        )
+        if stripped == t:
+            break
+        t = stripped
+    # "; and" / "; or" — the semicolon is redundant next to the operator.
+    t = re.sub(r"[;,]\s*(AND|OR)\b", r" \1", t, flags=re.I)
+    # A bare ';' joins parallel requirement groups ("(for Science students)
+    # X; (for Engineering students) Y"), which reads as OR.
+    t = t.replace(";", " OR ")
     # Grade qualifiers: "Grade A- or above in PHYS 1111" -> "PHYS 1111".
     t = re.sub(r"\bGrade\s+[A-F][+-]?\s+(?:or\s+(?:above|below)\s+)?in\s+", " ", t, flags=re.I)
     # Stray/repeated operators left behind by the removals above.
@@ -140,7 +158,22 @@ def clean_condition_text(raw: str) -> str:
 def tokenize(text: str) -> list[dict]:
     tokens: list[dict] = []
     i = 0
-    while i < len(text):
+    n = len(text)
+
+    def word_at(pos: int, word: str) -> bool:
+        """True when `word` sits at `pos` as a standalone token.
+
+        Guards against substring matches: without this, the "or" inside
+        "(For students without prerequisites)" is read as an OR operator
+        and the whole condition fails to parse (or "BAND" as AND).
+        """
+        if text[pos : pos + len(word)].upper() != word:
+            return False
+        before_ok = pos == 0 or not text[pos - 1].isalpha()
+        after_ok = pos + len(word) >= n or not text[pos + len(word)].isalpha()
+        return before_ok and after_ok
+
+    while i < n:
         ch = text[i]
         if ch.isspace() or ch in ",;":
             i += 1
@@ -149,11 +182,11 @@ def tokenize(text: str) -> list[dict]:
             tokens.append({"type": ch, "val": ch})
             i += 1
             continue
-        if text[i : i + 3].upper() == "AND":
+        if word_at(i, "AND"):
             tokens.append({"type": TOKEN_AND, "val": "AND"})
             i += 3
             continue
-        if text[i : i + 2].upper() == "OR":
+        if word_at(i, "OR"):
             tokens.append({"type": TOKEN_OR, "val": "OR"})
             i += 2
             continue
@@ -220,7 +253,10 @@ def _has_non_course_condition(text: str) -> bool:
     """True when the text still carries conditions we cannot model as codes
     (HKDSE/IELTS/Gaokao scores, standing, instructor approval, ...)."""
     leftover = COURSE_CODE_RE.sub(" ", text)
-    leftover = re.sub(r"[\s()/,;.\-+]", " ", leftover)
+    # Boolean operators are logic, not a condition ("AND" is three letters
+    # and would otherwise be flagged).
+    leftover = re.sub(r"\b(?:AND|OR)\b", " ", leftover, flags=re.I)
+    leftover = re.sub(r"[\s()/,;.\-+']", " ", leftover)
     return bool(re.search(r"[A-Za-z]{3,}", leftover))
 
 
@@ -232,8 +268,10 @@ def parse_condition(raw: str) -> tuple[list, bool]:
     """
     if not raw or not raw.strip():
         return [], False
+    # Flag unresolvable conditions from the *original* text: cleaning drops
+    # qualifiers like "(for non-BIBU students)" that the UI must still show.
+    partial = _has_non_course_condition(raw)
     cleaned = clean_condition_text(raw)
-    partial = _has_non_course_condition(cleaned)
     if not cleaned:
         return [], partial
     try:
@@ -371,9 +409,11 @@ def main() -> int:
                     dv["pqx"] = 1
             cq = (o.get("corequisite") or "").strip()
             if cq != coreq_raw:
-                cqd, _ = parse_condition(cq)
+                cqd, cqx = parse_condition(cq)
                 dv["cq"] = cq
                 dv["cqd"] = cqd
+                if cqx:
+                    dv["cqx"] = 1
             ex = (o.get("exclusion") or "").strip()
             if ex != excl_raw:
                 dv["ex"] = ex
@@ -414,6 +454,8 @@ def main() -> int:
         if coreq_raw:
             detail["cq"] = coreq_raw
             detail["cqd"] = coreq_dnf
+            if coreq_partial:
+                detail["cqx"] = 1
         if excl_raw:
             detail["ex"] = excl_raw
         if attrs:

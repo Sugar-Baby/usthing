@@ -46,6 +46,15 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
   const course = resolveCourse(code, term)
   const detail = resolveDetail(code, term)
   const prereqMet = isDnfSatisfied(detail?.pqd, completedSet)
+
+  // The raw requirement text is only worth showing when the tree cannot
+  // express everything: no course codes at all, or extra conditions
+  // (exam scores, standing, student-group qualifiers). Pure course logic
+  // renders as the tree alone.
+  const hasPrereqTree = !!detail?.pqd?.length
+  const showPrereqRaw = !!detail?.pq && (!hasPrereqTree || detail.pqx === 1)
+  const hasCoreqTree = !!detail?.cqd?.length
+  const showCoreqRaw = !!detail?.cq && (!hasCoreqTree || detail.cqx === 1)
   const unlocks = useMemo(() => getUnlocks(code), [code])
   const terms = getTerms()
   const termName = terms.find((t) => t.code === term)?.name ?? term
@@ -154,7 +163,7 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
         <Section title="Prerequisites">
           {detail?.pq ? (
             <>
-              {detail.pqd && detail.pqd.length > 0 && (
+              {hasPrereqTree && (
                 <View style={themed(prereqMet ? $metBadge : $unmetBadge)}>
                   <Text
                     text={
@@ -168,10 +177,12 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
                   />
                 </View>
               )}
-              <View style={themed($quoteBox)}>
-                <Text text={detail.pq} size="xs" style={themed($quoteText)} />
-              </View>
-              {detail.pqd && detail.pqd.length > 0 ? (
+              {showPrereqRaw && (
+                <View style={themed($quoteBox)}>
+                  <Text text={detail.pq} size="xs" style={themed($quoteText)} />
+                </View>
+              )}
+              {hasPrereqTree ? (
                 <View style={$treeWrap}>
                   <PrereqTree
                     dnf={detail.pqd}
@@ -186,7 +197,7 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
                   style={themed($muted)}
                 />
               )}
-              {detail.pqx === 1 && detail.pqd && detail.pqd.length > 0 && (
+              {hasPrereqTree && detail.pqx === 1 && (
                 <Text
                   text="The text also contains conditions that are not courses (exam scores, standing); the tree shows the course-based part only."
                   size="xxs"
@@ -214,13 +225,28 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
         {/* ---- corequisites / exclusions -------------------------- */}
         {detail?.cq ? (
           <Section title="Co-requisites">
-            <View style={themed($quoteBox)}>
-              <Text text={detail.cq} size="xs" style={themed($quoteText)} />
-            </View>
-            {detail.cqd && detail.cqd.length > 0 && (
+            {showCoreqRaw && (
+              <View style={themed($quoteBox)}>
+                <Text text={detail.cq} size="xs" style={themed($quoteText)} />
+              </View>
+            )}
+            {hasCoreqTree ? (
               <View style={$treeWrap}>
                 <PrereqTree dnf={detail.cqd} term={term} onOpenCourse={openCourse} />
               </View>
+            ) : (
+              <Text
+                text="No course-code co-requisites — the requirement is stated in the text above."
+                size="xxs"
+                style={themed($muted)}
+              />
+            )}
+            {hasCoreqTree && detail.cqx === 1 && (
+              <Text
+                text="The text also contains conditions that are not courses."
+                size="xxs"
+                style={themed($muted)}
+              />
             )}
           </Section>
         ) : null}

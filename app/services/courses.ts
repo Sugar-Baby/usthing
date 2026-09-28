@@ -64,6 +64,8 @@ export interface CourseDetail {
   /** raw corequisite text + DNF */
   cq?: string
   cqd?: PrereqDnf
+  /** corequisite text carries conditions we cannot model as courses */
+  cqx?: 1
   /** raw exclusion text */
   ex?: string
   /** catalog attributes (Common Core frameworks, DELI/READ/MEDI...) */
