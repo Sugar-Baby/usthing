@@ -36,7 +36,7 @@ Requirements: Node.js ≥ 20, npm ≥ 10.
 
 | Platform | Status |
 |---|---|
-| **Android** | ✅ **tested** — the EAS-built `preview` APK installed and run on an Android emulator |
+| Android | tested — the EAS-built `preview` APK installed and run on an Android emulator |
 | iOS | same code paths (core RN primitives only); not tested separately |
 | Web | `npm run bundle:web` builds and serves; the layout is phone-first |
 
