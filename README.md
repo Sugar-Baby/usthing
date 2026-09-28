@@ -11,22 +11,40 @@ inside the app. There is no backend, no authentication and no live API.
 
 ```bash
 npm install
-npx expo start
 ```
 
-Then scan the QR code with **Expo Go**, or press `i` / `a` in the terminal
-for a simulator. To produce a web build: `npm run bundle:web`.
+**Fastest look — web build (no native tooling needed):**
+
+```bash
+npm run bundle:web && npx serve dist
+```
+
+**Native app.** The template ships `expo-dev-client`,
+`react-native-mmkv` and `react-native-keyboard-controller`, so plain
+**Expo Go is not sufficient** — build a dev client once:
+
+```bash
+npx expo run:android         # local build (needs the Android SDK)
+npm run build:android:preview  # or an EAS cloud build
+```
+
+then `npm run start` and open the app.
 
 Requirements: Node.js ≥ 20, npm ≥ 10 (or yarn — a `yarn.lock` is included
 from the template).
 
-## Platforms tested
+## Verification status
 
-| Platform | Status |
+| Check | Result |
 |---|---|
-| Android (Expo Go / emulator) | primary target |
-| iOS (Expo Go / simulator) | same code paths, `ScrollView`/`FlatList` only |
-| Web (`expo start --web`) | works; layout is phone-first |
+| `npx tsc --noEmit` | clean |
+| `npx expo export --platform web` | bundles (6.8 MB) |
+| `npx jest app/services/courses.test.ts` | 20/20 data-layer tests pass |
+| `python scripts/preprocess.py` | rebuilds all assets from `courses.json` (~1 s) |
+| Device run | **not run in the development environment used** — please use the Quick start above |
+
+The app targets Android and iOS from the same code (only `ScrollView` /
+`FlatList` / core RN primitives); the web build is phone-first.
 
 ## What's implemented
 
