@@ -12,6 +12,7 @@ import { CourseCard } from "@/components/CourseCard"
 import { Text } from "@/components/Text"
 import type { AppStackScreenProps } from "@/navigators/navigationTypes"
 import { getTerms, prefixCounts, queryCourses, termStats } from "@/services/courses"
+import { loadTerm, saveTerm, useFavourites } from "@/services/preferences"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -24,9 +25,10 @@ import type { ThemedStyle } from "@/theme/types"
 export const CoursesScreen: FC<AppStackScreenProps<"Courses">> = ({ navigation }) => {
   const { themed } = useAppTheme()
   const terms = getTerms()
-  const [term, setTerm] = useState(terms[0]?.code ?? "")
+  const [term, setTerm] = useState(() => loadTerm())
   const [text, setText] = useState("")
   const [pickerOpen, setPickerOpen] = useState(false)
+  const favourites = useFavourites()
 
   const termName = terms.find((t) => t.code === term)?.name ?? term
   const stats = useMemo(() => termStats(term), [term])
@@ -145,6 +147,20 @@ export const CoursesScreen: FC<AppStackScreenProps<"Courses">> = ({ navigation }
               >
                 <Text text="All Courses" size="sm" weight="bold" style={themed($allButtonText)} />
               </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate("CourseList", { term: "", favourites: true })}
+                style={({ pressed }) => [themed($favButton), pressed && { opacity: 0.85 }]}
+                accessibilityRole="button"
+              >
+                <Text
+                  text={
+                    favourites.length > 0 ? `★ My Courses (${favourites.length})` : "★ My Courses"
+                  }
+                  size="sm"
+                  weight="bold"
+                  style={themed($favButtonText)}
+                />
+              </Pressable>
               <Text text="Courses offered by departments" size="xxs" style={themed($sectionLabel)} />
             </View>
           }
@@ -163,6 +179,7 @@ export const CoursesScreen: FC<AppStackScreenProps<"Courses">> = ({ navigation }
                   key={t.code}
                   onPress={() => {
                     setTerm(t.code)
+                    saveTerm(t.code)
                     setPickerOpen(false)
                   }}
                   style={({ pressed }) => [
@@ -300,6 +317,20 @@ const $allButton: ThemedStyle<ViewStyle> = (theme) => ({
 
 const $allButtonText: ThemedStyle<TextStyle> = (theme) => ({
   color: theme.colors.primaryDark,
+})
+
+const $favButton: ThemedStyle<ViewStyle> = (theme) => ({
+  backgroundColor: theme.colors.surface,
+  borderWidth: 1,
+  borderColor: theme.colors.secondaryBorder,
+  borderRadius: 6,
+  minHeight: 48,
+  alignItems: "center",
+  justifyContent: "center",
+})
+
+const $favButtonText: ThemedStyle<TextStyle> = (theme) => ({
+  color: theme.colors.secondaryDark,
 })
 
 const $sectionLabel: ThemedStyle<TextStyle> = (theme) => ({

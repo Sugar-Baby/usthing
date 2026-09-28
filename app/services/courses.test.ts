@@ -12,6 +12,7 @@ import {
   flattenDnf,
   getTerms,
   getUnlocks,
+  isDnfSatisfied,
   normalizeCode,
   prefixCounts,
   queryCourses,
@@ -137,5 +138,41 @@ describe("helpers", () => {
   it("flattens a DNF to its codes", () => {
     expect(flattenDnf([["A1000", "B2000"], "C3000"]).sort()).toEqual(["A1000", "B2000", "C3000"])
     expect(flattenDnf(undefined)).toEqual([])
+  })
+})
+
+describe("fuzzy search", () => {
+  it("ranks an exact code match first", () => {
+    expect(queryCourses({ term: "2610", text: "COMP2011" })[0]?.c).toBe("COMP2011")
+  })
+
+  it("tolerates a one-character typo in a code", () => {
+    const hits = queryCourses({ term: "2610", text: "COMP2001" }).map((c) => c.c)
+    expect(hits).toContain("COMP2011")
+    expect(hits).toContain("COMP1001")
+  })
+
+  it("returns nothing for unrelated queries", () => {
+    expect(queryCourses({ term: "2610", text: "zzzz9998" })).toEqual([])
+  })
+})
+
+describe("prerequisite satisfaction", () => {
+  it("is satisfied by any single complete AND-group", () => {
+    const dnf = [["A1000", "B2000"], ["C3000"]]
+    expect(isDnfSatisfied(dnf, new Set(["A1000", "B2000"]))).toBe(true)
+    expect(isDnfSatisfied(dnf, new Set(["C3000"]))).toBe(true)
+    expect(isDnfSatisfied(dnf, new Set(["A1000"]))).toBe(false)
+  })
+
+  it("treats an empty requirement as satisfied", () => {
+    expect(isDnfSatisfied([], new Set())).toBe(true)
+    expect(isDnfSatisfied(undefined, new Set())).toBe(true)
+  })
+
+  it("evaluates a real course's OR-of-ANDs prerequisite", () => {
+    const dnf = resolveDetail("AIAA2711", "2610")?.pqd
+    expect(isDnfSatisfied(dnf, new Set(["UFUG1103", "UFUG2102"]))).toBe(true)
+    expect(isDnfSatisfied(dnf, new Set(["UFUG1103"]))).toBe(false)
   })
 })

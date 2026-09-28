@@ -4,7 +4,8 @@ import { FlatList, Pressable, TextStyle, View, ViewStyle } from "react-native"
 import { CourseCard } from "@/components/CourseCard"
 import { Text } from "@/components/Text"
 import type { AppStackScreenProps } from "@/navigators/navigationTypes"
-import { getPrefixName, getTerms, queryCourses } from "@/services/courses"
+import { courseList, getPrefixName, getTerms, queryCourses } from "@/services/courses"
+import { useFavourites } from "@/services/preferences"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -14,23 +15,34 @@ import type { ThemedStyle } from "@/theme/types"
  */
 export const CourseListScreen: FC<AppStackScreenProps<"CourseList">> = ({ route, navigation }) => {
   const { themed } = useAppTheme()
-  const { term, prefix, commonCore } = route.params
+  const { term, prefix, commonCore, favourites } = route.params
+  const favouriteCodes = useFavourites()
 
-  const termName = getTerms().find((t) => t.code === term)?.name ?? term
-  const courses = useMemo(
-    () => queryCourses({ term, prefix, commonCore }),
-    [term, prefix, commonCore],
-  )
+  const termName = term
+    ? (getTerms().find((t) => t.code === term)?.name ?? term)
+    : "All terms"
 
-  const title = commonCore
-    ? "Common Core"
+  const courses = useMemo(() => {
+    if (favourites) {
+      const set = new Set(favouriteCodes)
+      return courseList.filter((c) => set.has(c.c))
+    }
+    return queryCourses({ term, prefix, commonCore })
+  }, [term, prefix, commonCore, favourites, favouriteCodes])
+
+  const title = favourites
+    ? "My Courses"
+    : commonCore
+      ? "Common Core"
+      : prefix
+        ? `${prefix} Courses`
+        : "All Courses"
+
+  const subtitle = favourites
+    ? `${courses.length} favourite${courses.length === 1 ? "" : "s"} · saved on this device`
     : prefix
-      ? `${prefix} Courses`
-      : "All Courses"
-
-  const subtitle = prefix
-    ? `${getPrefixName(prefix)} · ${termName}`
-    : termName
+      ? `${getPrefixName(prefix)} · ${termName}`
+      : termName
 
   const openCourse = (code: string) => navigation.navigate("CourseDetail", { code, term })
 
@@ -66,7 +78,15 @@ export const CourseListScreen: FC<AppStackScreenProps<"CourseList">> = ({ route,
         windowSize={11}
         ListEmptyComponent={
           <View style={$empty}>
-            <Text text="No courses found for this selection." size="sm" style={themed($emptyText)} />
+            <Text
+              text={
+                favourites
+                  ? "No favourites yet — tap ☆ on a course detail page to save it here."
+                  : "No courses found for this selection."
+              }
+              size="sm"
+              style={themed($emptyText)}
+            />
           </View>
         }
       />

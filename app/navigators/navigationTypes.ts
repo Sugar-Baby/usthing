@@ -6,8 +6,8 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack"
 export type AppStackParamList = {
   /** Department menu + search (the full-screen port of rouste's side menu) */
   Courses: undefined
-  /** Courses of one department, Common Core, or the whole catalog */
-  CourseList: { term: string; prefix?: string; commonCore?: boolean }
+  /** Courses of one department, Common Core, favourites, or the whole catalog */
+  CourseList: { term: string; prefix?: string; commonCore?: boolean; favourites?: boolean }
   /** Course detail with the recursive prerequisite tree */
   CourseDetail: { code: string; term: string }
 }

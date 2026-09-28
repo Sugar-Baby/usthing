@@ -30,8 +30,7 @@ npm run build:android:preview  # or an EAS cloud build
 
 then `npm run start` and open the app.
 
-Requirements: Node.js ≥ 20, npm ≥ 10 (or yarn — a `yarn.lock` is included
-from the template).
+Requirements: Node.js ≥ 20, npm ≥ 10.
 
 ## Verification status
 
@@ -64,14 +63,29 @@ The app targets Android and iOS from the same code (only `ScrollView` /
   shown verbatim with a note that only the course-based part is drawn.
 - Everything works without any API.
 
-**Optional extras taken**
+**Optional extras — all five listed in the brief**
 
-- Reverse index — “this course unlocks N courses” with navigation.
-- Common Core shortcut using the dataset’s own `CC22/CC25/CC26/4Y`
-  attribute labels.
-- Term-aware data: requirements are shown exactly as they stood in the
-  selected term.
-- Dark mode (the template’s theme system, re-palettised to HKUST colours).
+- **Favourites & persistent preferences** — star courses, mark courses as
+  taken, and your last selected term is remembered. Stored locally (MMKV
+  on native, `localStorage` on web — the same approach as rouste's saved
+  plans); no account, no backend.
+- **Advanced fuzzy search** — codes tolerate a one-character typo
+  (`comp2101` → `COMP2011`), titles match on tokens, and results are
+  relevance-ranked (exact code > code prefix > code substring > title
+  prefix > title substring > all-words).
+- **Prerequisite completion / “what this unlocks”** — mark courses as
+  taken and the app evaluates each prerequisite DNF (“Prerequisites met by
+  your completed courses”), the graph colours taken courses green, and
+  every course lists the courses it unlocks.
+- **Dependency graph visualization** — a layered graph (course on top,
+  direct prerequisites below, one level deeper underneath) with bezier
+  edges and tappable nodes, drawn with `react-native-svg`.
+- **Accessibility & polished interactions** — roles, labels and states on
+  every control, ≥ 44 pt tap targets, dynamic font scaling respected,
+  light/dark theming.
+
+Also kept from earlier: the Common Core shortcut (using the dataset’s own
+`CC22/CC25/CC26/4Y` labels), term-aware data, and dark mode.
 
 ## Architecture
 

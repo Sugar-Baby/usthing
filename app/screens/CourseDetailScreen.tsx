@@ -1,6 +1,7 @@
 import { FC, ReactNode, useMemo, useState } from "react"
 import { Pressable, ScrollView, TextStyle, View, ViewStyle } from "react-native"
 
+import { DependencyGraph } from "@/components/DependencyGraph"
 import { PrereqTree } from "@/components/PrereqTree"
 import { Text } from "@/components/Text"
 import type { AppStackScreenProps } from "@/navigators/navigationTypes"
@@ -9,9 +10,16 @@ import {
   getCourse,
   getTerms,
   getUnlocks,
+  isDnfSatisfied,
   resolveCourse,
   resolveDetail,
 } from "@/services/courses"
+import {
+  toggleCompleted,
+  toggleFavourite,
+  useCompleted,
+  useFavourites,
+} from "@/services/preferences"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -29,9 +37,15 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
   const { code, term } = route.params
   const { themed } = useAppTheme()
   const [showAllUnlocks, setShowAllUnlocks] = useState(false)
+  const favourites = useFavourites()
+  const completed = useCompleted()
+  const completedSet = useMemo(() => new Set(completed), [completed])
+  const isFav = favourites.includes(code)
+  const isDone = completed.includes(code)
 
   const course = resolveCourse(code, term)
   const detail = resolveDetail(code, term)
+  const prereqMet = isDnfSatisfied(detail?.pqd, completedSet)
   const unlocks = useMemo(() => getUnlocks(code), [code])
   const terms = getTerms()
   const termName = terms.find((t) => t.code === term)?.name ?? term
@@ -68,6 +82,31 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
           <Text text={course.c} size="md" weight="bold" style={themed($headerCode)} />
           <Text text={termName} size="xxs" style={themed($muted)} />
         </View>
+        <Pressable
+          onPress={() => toggleCompleted(code)}
+          hitSlop={6}
+          style={({ pressed }) => [themed(isDone ? $takenChip : $actionChip), pressed && { opacity: 0.8 }]}
+          accessibilityRole="button"
+          accessibilityLabel={isDone ? "Mark as not taken" : "Mark as taken"}
+          accessibilityState={{ selected: isDone }}
+        >
+          <Text
+            text={isDone ? "✓ Taken" : "Taken?"}
+            size="xxs"
+            weight="semiBold"
+            style={themed(isDone ? $takenChipText : $actionChipText)}
+          />
+        </Pressable>
+        <Pressable
+          onPress={() => toggleFavourite(code)}
+          hitSlop={8}
+          style={$starButton}
+          accessibilityRole="button"
+          accessibilityLabel={isFav ? "Remove from favourites" : "Add to favourites"}
+          accessibilityState={{ selected: isFav }}
+        >
+          <Text text={isFav ? "★" : "☆"} size="lg" style={themed(isFav ? $starOn : $starOff)} />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={themed($content)}>
@@ -115,6 +154,20 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
         <Section title="Prerequisites">
           {detail?.pq ? (
             <>
+              {detail.pqd && detail.pqd.length > 0 && (
+                <View style={themed(prereqMet ? $metBadge : $unmetBadge)}>
+                  <Text
+                    text={
+                      prereqMet
+                        ? "✓ Prerequisites met by your completed courses"
+                        : "Not met yet — mark courses as taken to check"
+                    }
+                    size="xxs"
+                    weight="semiBold"
+                    style={themed(prereqMet ? $metBadgeText : $unmetBadgeText)}
+                  />
+                </View>
+              )}
               <View style={themed($quoteBox)}>
                 <Text text={detail.pq} size="xs" style={themed($quoteText)} />
               </View>
@@ -145,6 +198,18 @@ export const CourseDetailScreen: FC<AppStackScreenProps<"CourseDetail">> = ({
             <Text text="No prerequisites." size="xs" style={themed($body)} />
           )}
         </Section>
+
+        {/* ---- dependency graph ----------------------------------- */}
+        {detail?.pqd && detail.pqd.length > 0 && (
+          <Section title="Dependency Graph">
+            <DependencyGraph
+              code={code}
+              term={term}
+              onOpenCourse={openCourse}
+              completed={completed}
+            />
+          </Section>
+        )}
 
         {/* ---- corequisites / exclusions -------------------------- */}
         {detail?.cq ? (
@@ -410,6 +475,63 @@ const $chipText: ThemedStyle<TextStyle> = (theme) => ({ color: theme.colors.text
 
 const $attrRow: ViewStyle = { flexDirection: "row", alignItems: "center", gap: 8 }
 const $attrText: ViewStyle = { flex: 1 }
+
+const $actionChip: ThemedStyle<ViewStyle> = (theme) => ({
+  borderWidth: 1,
+  borderColor: theme.colors.border,
+  borderRadius: 6,
+  paddingHorizontal: 8,
+  paddingVertical: 4,
+})
+
+const $actionChipText: ThemedStyle<TextStyle> = (theme) => ({
+  color: theme.colors.textSecondary,
+})
+
+const $takenChip: ThemedStyle<ViewStyle> = (theme) => ({
+  borderWidth: 1,
+  borderColor: theme.colors.success,
+  backgroundColor: theme.colors.successLight,
+  borderRadius: 6,
+  paddingHorizontal: 8,
+  paddingVertical: 4,
+})
+
+const $takenChipText: ThemedStyle<TextStyle> = (theme) => ({
+  color: theme.colors.success,
+})
+
+const $starButton: ViewStyle = {
+  width: 34,
+  height: 34,
+  alignItems: "center",
+  justifyContent: "center",
+}
+
+const $starOn: ThemedStyle<TextStyle> = (theme) => ({ color: theme.colors.secondary })
+const $starOff: ThemedStyle<TextStyle> = (theme) => ({ color: theme.colors.textMuted })
+
+const $metBadge: ThemedStyle<ViewStyle> = (theme) => ({
+  backgroundColor: theme.colors.successLight,
+  borderWidth: 1,
+  borderColor: theme.colors.success,
+  borderRadius: 6,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+})
+
+const $metBadgeText: ThemedStyle<TextStyle> = (theme) => ({ color: theme.colors.success })
+
+const $unmetBadge: ThemedStyle<ViewStyle> = (theme) => ({
+  backgroundColor: theme.colors.surfaceVariant,
+  borderWidth: 1,
+  borderColor: theme.colors.border,
+  borderRadius: 6,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+})
+
+const $unmetBadgeText: ThemedStyle<TextStyle> = (theme) => ({ color: theme.colors.textSecondary })
 
 const $ciloRow: ViewStyle = { flexDirection: "row", gap: 6 }
 const $ciloText: ViewStyle = { flex: 1 }

@@ -175,6 +175,18 @@ export function prereqCodesOf(code: string, term: string): string[] {
   return flattenDnf(resolveDetail(code, term)?.pqd)
 }
 
+/**
+ * Whether a set of completed courses satisfies a prerequisite DNF:
+ * at least one AND-group must be fully taken. An empty DNF is satisfied.
+ */
+export function isDnfSatisfied(dnf: PrereqDnf | undefined, completed: Set<string>): boolean {
+  if (!dnf || dnf.length === 0) return true
+  return dnf.some((group) => {
+    const codes = Array.isArray(group) ? group : [group]
+    return codes.every((c) => completed.has(c))
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -189,22 +201,77 @@ export interface CourseQuery {
   text?: string
 }
 
+/** Bounded edit distance (early-exits once the budget is exceeded). */
+function editDistanceAtMost(a: string, b: string, max: number): boolean {
+  if (Math.abs(a.length - b.length) > max) return false
+  let prev: number[] = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const curr: number[] = [i]
+    let rowMin = i
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
+      if (curr[j] < rowMin) rowMin = curr[j]
+    }
+    if (rowMin > max) return false
+    prev = curr
+  }
+  return prev[b.length] <= max
+}
+
+/** Relevance of a course code for the query (0 = no match). */
+function codeMatchScore(query: string, course: CourseRow): number {
+  if (!query) return 0
+  const code = course.codeNorm
+  if (code === query) return 1000
+  if (code.startsWith(query)) return 900
+  const at = code.indexOf(query)
+  if (at >= 0) return 800 - at
+  // typo tolerance for code-like queries ("comp2101" -> "COMP2011")
+  if (query.length >= 6 && editDistanceAtMost(query, code, 1)) return 600
+  return 0
+}
+
+/** Relevance of the course title for the query (0 = no match). */
+function titleMatchScore(query: string, course: CourseRow): number {
+  if (!query) return 0
+  const title = course.titleLower
+  if (title.startsWith(query)) return 500
+  if (title.includes(query)) return 400
+  const words = query.split(/\s+/).filter(Boolean)
+  if (words.length > 1 && words.every((w) => title.includes(w))) return 300
+  return 0
+}
+
+/**
+ * Filter + relevance-ranked fuzzy search.
+ *
+ * Codes outrank titles; exact/prefix/substring matches outrank
+ * edit-distance matches. Filtering 4,030 rows is a single pass; ranking
+ * only ever runs on the filtered set.
+ */
 export function queryCourses({ term, prefix, commonCore, text }: CourseQuery): CourseRow[] {
   const q = (text ?? "").trim()
   const codeQ = normalizeCode(q)
   const textQ = q.toLowerCase()
-  const tokens = textQ.split(/\s+/).filter(Boolean)
 
-  return courseList.filter((c) => {
+  const passesFilters = (c: CourseRow) => {
     if (term && !c.tm.includes(term)) return false
     if (prefix && c.p !== prefix) return false
     if (commonCore && c.cc.length === 0) return false
-    if (!q) return true
-    if (codeQ && c.codeNorm.includes(codeQ)) return true
-    if (textQ && c.titleLower.includes(textQ)) return true
-    // all words of the query appear somewhere in the title
-    return tokens.length > 0 && tokens.every((t) => c.titleLower.includes(t))
-  })
+    return true
+  }
+
+  if (!q) return courseList.filter(passesFilters)
+
+  const scored: { row: CourseRow; score: number }[] = []
+  for (const c of courseList) {
+    if (!passesFilters(c)) continue
+    const score = Math.max(codeMatchScore(codeQ, c), titleMatchScore(textQ, c))
+    if (score > 0) scored.push({ row: c, score })
+  }
+  scored.sort((a, b) => b.score - a.score || a.row.c.localeCompare(b.row.c))
+  return scored.map((s) => s.row)
 }
 
 /** Prefix buckets with per-term course counts, for the department grid. */
