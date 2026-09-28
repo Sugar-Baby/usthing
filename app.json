@@ -1,5 +1,5 @@
 {
-  "name": "AppTechTest2627",
+  "name": "HKUST Course Explorer",
   "slug": "AppTechTest2627",
   "scheme": "apptechtest2627",
   "version": "1.0.0",
@@ -42,7 +42,7 @@
         "image": "./assets/images/app-icon-android-adaptive-foreground.png",
         "imageWidth": 300,
         "resizeMode": "contain",
-        "backgroundColor": "#191015"
+        "backgroundColor": "#0444C4"
       }
     ],
     [
