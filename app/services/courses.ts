@@ -79,6 +79,8 @@ export interface Meta {
   terms: { code: string; name: string }[]
   departments: { code: string; name: string; count: number }[]
   prefixToDept: Record<string, string>
+  /** human-readable department names per course prefix */
+  prefixNames: Record<string, string>
 }
 
 /** A catalog course plus derived search keys (built once at module load). */
@@ -234,3 +236,7 @@ export function termStats(term: string) {
 
 export const getTerms = () => meta.terms
 export const getDepartmentName = (prefix: string) => meta.prefixToDept[prefix] ?? prefix
+
+/** Display name of a department, e.g. COMP -> "Computer Science and
+ * Engineering" (names reused from the author's earlier course planner). */
+export const getPrefixName = (prefix: string) => meta.prefixNames?.[prefix] ?? prefix

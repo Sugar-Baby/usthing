@@ -36,6 +36,69 @@ DETAILS_DIR = os.path.join(OUT_DIR, "details")
 # Newest term wins when merging offerings of the same course.
 TERM_ORDER = ["2610", "2540", "2530", "2520"]
 
+# Department display names, reused from the author's earlier course planner
+# (rouste): the UST Archive dataset only carries codes and nicknames.
+PREFIX_NAMES = {
+    "ACCT": "Accounting",
+    "AISC": "Interdisciplinary Studies",
+    "AMCC": "Arts and Machine Creativity",
+    "BIBU": "Biotechnology and Business",
+    "BIEN": "Bioengineering",
+    "CENG": "Chemical and Biological Engineering",
+    "CHEM": "Chemistry",
+    "CIVL": "Civil and Environmental Engineering",
+    "COMP": "Computer Science and Engineering",
+    "CPEG": "Computer Engineering",
+    "CTDL": "Critical Thinking and Data Literacy",
+    "DASC": "Data Analytics in Science",
+    "DSCT": "Data Science and Technology",
+    "ECON": "Economics",
+    "ELEC": "Electronic and Computer Engineering",
+    "EMIA": "Emerging Interdisciplinary Areas",
+    "ENEG": "Energy",
+    "ENGG": "School of Engineering",
+    "ENTR": "Entrepreneurship",
+    "ENVR": "Environment",
+    "ENVS": "Environmental Science",
+    "FINA": "Finance",
+    "GBUS": "Global Business",
+    "GNED": "General Education",
+    "HART": "Studio Arts courses offered by HUMA",
+    "HLTH": "Health and Physical Education",
+    "HMAW": "Habits, Mindsets, and Wellness",
+    "HUMA": "Humanities",
+    "IEDA": "Industrial Engineering and Decision Analytics",
+    "IIMP": "Individualized Interdisciplinary Major",
+    "IROP": "International Research Opportunities Program",
+    "ISDN": "Integrative Systems and Design",
+    "ISOM": "Information Systems, Business Statistics and Operations Management",
+    "LABU": "Language for Business",
+    "LANG": "Language",
+    "LEGL": "Legal Education",
+    "LIFS": "Life Science",
+    "MARK": "Marketing",
+    "MATH": "Mathematics",
+    "MECH": "Mechanical and Aerospace Engineering",
+    "MGMT": "Management",
+    "OCES": "Ocean Science",
+    "PHYS": "Physics",
+    "PPOL": "Public Policy",
+    "RMBI": "Risk Management and Business Intelligence",
+    "SBMT": "School of Business and Management",
+    "SCIE": "School of Science",
+    "SGFN": "Sustainable and Green Finance",
+    "SHSS": "School of Humanities and Social Science",
+    "SISP": "Summer Institute for Secondary School Students",
+    "SOSC": "Social Science",
+    "SUST": "Sustainability",
+    "TEMG": "Technology and Management",
+    "UCOP": "Undergraduate Global Challenges and Opportunities Program",
+    "UPOP": "Undergraduate Practice Opportunities Program",
+    "UROP": "Undergraduate Research Opportunities Program",
+    "UTOP": "Undergraduate Teaching Opportunities Program",
+    "WBBA": "SF Program in World Business",
+}
+
 # ---------------------------------------------------------------------------
 # Prerequisite / corequisite / exclusion parsing (adapted from rouste)
 # ---------------------------------------------------------------------------
@@ -427,6 +490,11 @@ def main() -> int:
         ],
         "prefixToDept": {
             p: dept_of_prefix[p].most_common(1)[0][0] for p in sorted(dept_of_prefix)
+        },
+        "prefixNames": {
+            p: PREFIX_NAMES.get(p)
+            or dept_names.get(dept_of_prefix[p].most_common(1)[0][0], p)
+            for p in sorted(dept_of_prefix)
         },
     }
     dump(os.path.join(OUT_DIR, "meta.json"), meta)

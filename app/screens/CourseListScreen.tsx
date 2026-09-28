@@ -4,7 +4,7 @@ import { FlatList, Pressable, TextStyle, View, ViewStyle } from "react-native"
 import { CourseCard } from "@/components/CourseCard"
 import { Text } from "@/components/Text"
 import type { AppStackScreenProps } from "@/navigators/navigationTypes"
-import { getDepartmentName, getTerms, queryCourses } from "@/services/courses"
+import { getPrefixName, getTerms, queryCourses } from "@/services/courses"
 import { useAppTheme } from "@/theme/context"
 import type { ThemedStyle } from "@/theme/types"
 
@@ -29,7 +29,7 @@ export const CourseListScreen: FC<AppStackScreenProps<"CourseList">> = ({ route,
       : "All Courses"
 
   const subtitle = prefix
-    ? `${getDepartmentName(prefix)} · ${termName}`
+    ? `${getPrefixName(prefix)} · ${termName}`
     : termName
 
   const openCourse = (code: string) => navigation.navigate("CourseDetail", { code, term })
