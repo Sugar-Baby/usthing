@@ -32,18 +32,22 @@ then `npm run start` and open the app.
 
 Requirements: Node.js ≥ 20, npm ≥ 10.
 
+## Platforms tested
+
+| Platform | Status |
+|---|---|
+| **Android** | ✅ **tested** — the EAS-built `preview` APK installed and run on an Android emulator |
+| iOS | same code paths (core RN primitives only); not tested separately |
+| Web | `npm run bundle:web` builds and serves; the layout is phone-first |
+
 ## Verification status
 
 | Check | Result |
 |---|---|
 | `npx tsc --noEmit` | clean |
-| `npx expo export --platform web` | bundles (6.8 MB) |
-| `npx jest app/services/courses.test.ts` | 20/20 data-layer tests pass |
+| `npx expo export --platform web` | bundles (6.9 MB) |
+| `npx jest` | 5 suites / 47 tests pass (incl. a 30-course rendering sample) |
 | `python scripts/preprocess.py` | rebuilds all assets from `courses.json` (~1 s) |
-| Device run | **not run in the development environment used** — please use the Quick start above |
-
-The app targets Android and iOS from the same code (only `ScrollView` /
-`FlatList` / core RN primitives); the web build is phone-first.
 
 ## What's implemented
 
