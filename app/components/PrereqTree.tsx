@@ -70,7 +70,7 @@ export const PrereqTree: FC<PrereqTreeProps> = ({
           <View style={multipleOptions ? themed($optionCard) : $plainGroup}>
             {multipleOptions && (
               <Text
-                text={`Option ${gi + 1} · all of`}
+                text={`Option ${gi + 1}`}
                 size="xxs"
                 weight="semiBold"
                 style={themed($optionLabel)}

@@ -109,8 +109,8 @@ describe("CourseDetailScreen — 30-course sample", () => {
     // parses into four options, each an "all of" pair.
     const view = renderDetail("AIAA2711")
     expect(view.queryAllByText("Any one of these 4 options:").length).toBeGreaterThan(0)
-    expect(view.queryAllByText("Option 1 · all of").length).toBeGreaterThan(0)
-    expect(view.queryAllByText("Option 4 · all of").length).toBeGreaterThan(0)
+    expect(view.queryAllByText("Option 1").length).toBeGreaterThan(0)
+    expect(view.queryAllByText("Option 4").length).toBeGreaterThan(0)
     expect(view.queryAllByText("or").length).toBeGreaterThan(0)
     expect(view.queryAllByText("and").length).toBeGreaterThan(0)
   })
