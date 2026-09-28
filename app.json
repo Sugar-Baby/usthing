@@ -59,6 +59,10 @@
   "extra": {
     "ignite": {
       "version": "11.5.0"
+    },
+    "eas": {
+      "projectId": "e4e78760-2441-43fd-960c-8155d86a50f9"
     }
-  }
+  },
+  "owner": "jifei_yang"
 }
