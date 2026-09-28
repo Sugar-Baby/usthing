@@ -21,9 +21,9 @@ const reactotron = Reactotron.configure({
   },
 })
 
-reactotron.use(mmkvPlugin<ReactotronReactNative>({ storage }))
-
 if (Platform.OS !== "web") {
+  // MMKV has no web back end, so the storage inspector is native-only.
+  reactotron.use(mmkvPlugin<ReactotronReactNative>({ storage }))
   reactotron.useReactNative({
     networking: {
       ignoreUrls: /symbolicate/,
